@@ -187,10 +187,14 @@ function StudyDataLoader(study, json) {
    */ 
   this.loadStudyEventDefs = function() {
     debug("loading study events", util_logDebug );
-    app_studyEventDefs = this.study["MetaDataVersion"]["StudyEventDef"];
-    if (app_studyEventDefs[0] == undefined) { 
+    app_studyEventDefs = util_ensureArray(this.study["MetaDataVersion"]["StudyEventDef"]);
+   
+    if (app_studyEventDefs == undefined) { 
       app_studyEventDefs = new Array();
-      app_studyEventDefs.push(this.study["MetaDataVersion"]["StudyEventDef"]);
+      if(this.study["MetaDataVersion"]["StudyEventDef"]){
+    	  app_studyEventDefs.push(this.study["MetaDataVersion"]["StudyEventDef"]);
+      }
+      
      
     }
     for (var i=0;i< app_studyEventDefs.length;i++) {
@@ -207,7 +211,7 @@ function StudyDataLoader(study, json) {
   this.loadItemDefs = function() {
     debug("loading item items", util_logDebug );
     app_itemDefs = this.study["MetaDataVersion"]["ItemDef"];
-    if (app_itemDefs[0] == undefined) { 
+    if (app_itemDefs == undefined) { 
       app_itemDefs = new Array();
       app_itemDefs.push(this.study["MetaDataVersion"]["ItemDef"]);
     }
@@ -222,9 +226,12 @@ function StudyDataLoader(study, json) {
     // app_formDefs = this.study["MetaDataVersion"]["FormDef"];
 	  app_formDefs  = util_ensureArray(this.study["MetaDataVersion"]["FormDef"]);
 
-    if (app_formDefs[0] == undefined) { 
+    if (app_formDefs == undefined) { 
       app_formDefs = new Array();
-      app_formDefs.push(this.study["MetaDataVersion"]["FormDef"]);
+      if(this.study["MetaDataVersion"]["FormDef"]){
+    	  app_formDefs.push(this.study["MetaDataVersion"]["FormDef"]);
+      }
+     
     }
     for(var i=0;i<app_formDefs.length;i++){
     	var formDefOid = app_formDefs[i]["@OID"];
@@ -274,14 +281,27 @@ function StudyDataLoader(study, json) {
     var clinicalData = this.json["ClinicalData"];
     var subjectsData = util_ensureArray(clinicalData["SubjectData"]);
     
-    for (var i=0;i<subjectsData.length;i++) {
-      if(subjectsData[i]["@SubjectKey"] == app_studySubjectOID) { 
-        subjectData = subjectsData[i];
-        break;
-      }
+    if(app_studySubjectOID =='*'){
+    	if(!subjectsData){
+			var subjectsData = [];
+    		for (var i=0;i<clinicalData.length;i++) {
+				subjectsData.push(clinicalData[i]["SubjectData"]);
+			}	
+    	}
+    	
+    	subjectData = subjectsData;    	
+    	
+    }else{
+    	for (var i=0;i<subjectsData.length;i++) {
+		  if(subjectsData[i]["@SubjectKey"] == app_studySubjectOID) { 
+			subjectData = subjectsData[i];
+			break;
+		  }
+		}	
     }
     app_thisClinicalData = clinicalData;
     app_thisSubjectsData = subjectData;
+    app_allSubjectsData = subjectData;
     //app_studySubjectDOB = subjectData["@OpenClinica:DateOfBirth"];
     
     var studyEventsData = util_ensureArray(subjectData["StudyEventData"]);
@@ -365,19 +385,21 @@ function StudyDataLoader(study, json) {
 	        for (var j=0;j<itemsData.length;j++) {
 	          var itemValue = itemsData[j]["@Value"];
 	          var itemOID = itemsData[j]["@ItemOID"];
-	          var key = studyEventOID+studyEventRepeatKey+itemOID;
-	          if (key+repeatKey in app_itemValuesMap == false){
-	        	  app_itemValuesMap[key+repeatKey] = {}; 
+	          var dash="-";
+	          var key = studyEventOID+dash+studyEventRepeatKey+dash+itemOID;
+	          var keyAndRepeat = key+dash+repeatKey;
+	          if (keyAndRepeat in app_itemValuesMap == false){
+	        	  app_itemValuesMap[keyAndRepeat] = {}; 
 	        	  
 	          }
 	          if(key in app_audits == false && app_displayAudits=='y')
-	        	  app_audits[studyEventOID+studyEventRepeatKey+itemOID]={};
+	        	  app_audits[key]={};
         	  if(key in app_dns == false && app_displayDNs=='y')
-	          app_dns[studyEventOID+studyEventRepeatKey+itemOID]={};
+	          app_dns[key]={};
 
-        	  app_itemValuesMap[studyEventOID+studyEventRepeatKey+itemOID+repeatKey] = itemValue; 
-if (app_displayAudits =='y')app_audits[studyEventOID+studyEventRepeatKey+itemOID][repeatKey] = itemsData[j]["OpenClinica:AuditLogs"];
-if (app_displayDNs =='y')   app_dns[studyEventOID+studyEventRepeatKey+itemOID][repeatKey] = itemsData[j]["OpenClinica:DiscrepancyNotes"];
+        	  app_itemValuesMap[keyAndRepeat] = itemValue; 
+if (app_displayAudits =='y')app_audits[key][repeatKey] = itemsData[j]["OpenClinica:AuditLogs"];
+if (app_displayDNs =='y')   app_dns[key][repeatKey] = itemsData[j]["OpenClinica:DiscrepancyNotes"];
 	        }
 	      }
 	    
